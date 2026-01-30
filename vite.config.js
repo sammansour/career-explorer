@@ -12,10 +12,21 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          motion: ['framer-motion']
+          'react-vendor': ['react', 'react-dom'],
+          'router': ['react-router', 'react-router-dom'],
+          'motion': ['framer-motion']
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 1000
+  },
+  server: {
+    port: 5173,
+    strictPort: false,
+    open: false
+  },
+  preview: {
+    port: 4173,
+    strictPort: false
   }
 })

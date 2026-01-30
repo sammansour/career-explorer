@@ -24,16 +24,42 @@ output "deployment_par_url" {
   sensitive   = true
 }
 
+# Chatbot Outputs (v3.0.0+)
+output "chatbot_api_gateway_url" {
+  description = "API Gateway URL for the AI Career Counselor chatbot"
+  value       = "${oci_apigateway_gateway.chatbot_gateway.hostname}/chat"
+}
+
+output "chatbot_application_id" {
+  description = "OCID of the Functions Application"
+  value       = oci_functions_application.career_counselor_app.id
+}
+
+output "chatbot_application_name" {
+  description = "Name of the Functions Application"
+  value       = oci_functions_application.career_counselor_app.display_name
+}
+
 output "deployment_instructions" {
-  description = "Instructions for deploying the website"
+  description = "Instructions for deploying the website and chatbot"
   value       = <<-EOT
   
-  Deployment Instructions:
+  =============================================================================
+  DEPLOYMENT INSTRUCTIONS - CareerExplorer v3.0.0 with AI Career Counselor
+  =============================================================================
   
+  STEP 1: Deploy the React Application
+  -------------------------------------
   1. Build your React application:
      npm run build
   
-  2. Upload the dist folder to Object Storage:
+  2. Set the chatbot API URL in your .env file:
+     echo "VITE_CHATBOT_API_URL=https://${oci_apigateway_gateway.chatbot_gateway.hostname}/chat" > .env
+  
+  3. Rebuild with the environment variable:
+     npm run build
+  
+  4. Upload the dist folder to Object Storage:
      
      Using OCI CLI:
      oci os object bulk-upload \
@@ -45,9 +71,41 @@ output "deployment_instructions" {
      Or use the provided deploy script:
      ./deploy.sh
   
-  3. Access your website at:
-     https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html
   
-  Note: For production, consider setting up a custom domain and CDN.
+  STEP 2: Deploy the AI Career Counselor Function
+  ------------------------------------------------
+  1. Install Fn CLI:
+     curl -LSs https://raw.githubusercontent.com/fnproject/cli/master/install | sh
+  
+  2. Configure Fn CLI:
+     fn update context oracle.compartment-id ${var.compartment_ocid}
+     fn update context api-url https://functions.${var.region}.oraclecloud.com
+     fn update context registry ${var.region}.ocir.io/YOUR_TENANCY_NAMESPACE/career-explorer
+  
+  3. Deploy the function:
+     cd oci-functions/career-counselor
+     fn -v deploy --app ${oci_functions_application.career_counselor_app.display_name}
+  
+  4. Get the function OCID:
+     fn list functions ${oci_functions_application.career_counselor_app.display_name}
+  
+  5. Update terraform.tfvars with the function OCID:
+     chatbot_function_ocid = "ocid1.fnfunc.oc1..."
+  
+  6. Apply Terraform again to link the API Gateway:
+     terraform apply
+  
+  
+  STEP 3: Access Your Application
+  --------------------------------
+  Website: https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html
+  
+  Chatbot API: https://${oci_apigateway_gateway.chatbot_gateway.hostname}/chat
+  
+  
+  NOTE: For production, consider setting up a custom domain and CDN.
+  
+  For detailed instructions, see docs/CHATBOT_SETUP.md
+  =============================================================================
   EOT
 }

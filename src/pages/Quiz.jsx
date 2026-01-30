@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { careers } from '../data/careers';
+import { careers, interests } from '../data/careers';
 
 const Quiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);

@@ -157,15 +157,17 @@ Edit the `questions` array in `src/pages/Quiz.jsx`.
 
 ## 🛠️ Technology Stack
 
-| Technology | Purpose | Why We Chose It |
-|------------|---------|-----------------|
-| **React** | UI Framework | Modern, popular, great for SPAs |
-| **Tailwind CSS** | Styling | Rapid development, consistent design |
-| **Framer Motion** | Animations | Smooth, professional animations |
-| **Vite** | Build Tool | Fast builds, modern dev experience |
-| **React Router** | Navigation | Standard routing for React |
-| **OCI Object Storage** | Hosting | Free tier, reliable, scalable |
-| **Terraform** | Infrastructure | Version-controlled infrastructure |
+| Technology | Purpose | Why We Chose It | Version |
+|------------|---------|-----------------|---------|
+| **React 19** | UI Framework | Modern, cutting-edge features and performance | 19.0.0 ⚡ |
+| **React Router 7** | Navigation | Latest routing with enhanced capabilities | 7.1.1 ⚡ |
+| **Tailwind CSS** | Styling | Rapid development, consistent design | 3.4.17 |
+| **Framer Motion** | Animations | Smooth, professional animations | 11.15.0 |
+| **Vite 6** | Build Tool | Lightning-fast builds, modern dev experience | 6.0.5 ⚡ |
+| **OCI Object Storage** | Hosting | Free tier, reliable, scalable | - |
+| **Terraform** | Infrastructure | Version-controlled infrastructure | - |
+
+⚡ = Latest major version with cutting-edge features
 
 ## 📊 What's Included in Career Data
 

@@ -40,3 +40,22 @@ variable "environment" {
   type        = string
   default     = "prod"
 }
+
+# Chatbot / AI Counselor Configuration
+variable "openai_api_key" {
+  description = "OpenAI API key for the AI career counselor chatbot"
+  type        = string
+  sensitive   = true
+}
+
+variable "openai_model" {
+  description = "OpenAI model to use (gpt-4o-mini recommended for cost, gpt-4o for quality)"
+  type        = string
+  default     = "gpt-4o-mini"
+}
+
+variable "chatbot_function_ocid" {
+  description = "OCID of the deployed chatbot function (set after manual function deployment)"
+  type        = string
+  default     = ""
+}

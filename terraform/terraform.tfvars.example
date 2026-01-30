@@ -14,3 +14,10 @@ compartment_ocid = "ocid1.compartment.oc1..example"
 # Project Configuration
 project_name = "career-explorer"
 environment  = "prod"
+
+# AI Career Counselor Configuration (v3.0.0+)
+openai_api_key = "sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # Your OpenAI API key
+openai_model   = "gpt-4o-mini"  # Options: gpt-4o-mini (cheaper), gpt-4o (better quality)
+
+# Function OCID (leave empty initially, will be set after function deployment)
+chatbot_function_ocid = ""

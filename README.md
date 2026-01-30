@@ -2,20 +2,53 @@
 
 A modern, interactive web application designed to help high school students explore career paths, discover salary potential, and plan their educational journey. Built with React, Tailwind CSS, and Framer Motion, deployed on Oracle Cloud Infrastructure (OCI).
 
-![CareerExplorer](https://img.shields.io/badge/React-18.3.1-blue)
-![Tailwind](https://img.shields.io/badge/Tailwind-3.4.15-38B2AC)
-![ESLint](https://img.shields.io/badge/ESLint-9.15.0-4B32C3)
+![CareerExplorer](https://img.shields.io/badge/Version-3.0.0-brightgreen)
+![React](https://img.shields.io/badge/React-19.0.0-blue)
+![Tailwind](https://img.shields.io/badge/Tailwind-3.4.17-38B2AC)
+![ESLint](https://img.shields.io/badge/ESLint-9.17.0-4B32C3)
+![Vite](https://img.shields.io/badge/Vite-6.0.5-646CFF)
+![AI](https://img.shields.io/badge/AI-OpenAI%20GPT-412991)
 ![OCI](https://img.shields.io/badge/OCI-Free%20Tier-F80000)
 
 ## 🎯 Features
 
 - **40+ Career Profiles**: Comprehensive information on tech, design, engineering, and business careers
+- **🤖 AI Career Counselor** (NEW in v3.0.0): Chat with an AI-powered career counselor that provides:
+  - Personalized career guidance
+  - University program recommendations
+  - Companies hiring for each role
+  - Education pathway advice
+  - Natural conversation with context awareness
 - **Interactive Quiz**: Personalized career recommendations based on interests and goals
 - **Salary Information**: Real salary ranges from entry to senior level positions
 - **Action Steps**: Concrete next steps for pursuing each career
 - **Favorites System**: Save and compare careers side-by-side
 - **Responsive Design**: Beautiful UI that works on all devices
 - **Fast Performance**: Optimized build with code splitting
+
+## 🤖 AI Career Counselor (v3.0.0+)
+
+The AI chatbot uses OpenAI's GPT models to provide personalized career counseling:
+
+**Key Capabilities:**
+- Answer questions about any career path
+- Recommend top universities for each field (MIT, Stanford, CMU, etc.)
+- Suggest companies actively hiring (Google, Microsoft, Meta, etc.)
+- Provide degree program recommendations
+- Understand conversation context and follow-up questions
+
+**Example conversation:**
+```
+Student: "What universities are best for UX design?"
+AI: "Great question! Top schools for UX design include Stanford's d.school, 
+RISD, Carnegie Mellon's HCI program, and MIT Media Lab. These programs 
+offer strong foundations in design thinking, user research, and prototyping.
+Would you like to know more about any specific program?"
+```
+
+**Setup:** See `docs/CHATBOT_SETUP.md` for complete deployment guide.
+
+**Cost:** ~$1-5/month with OCI free tier + OpenAI (using gpt-4o-mini)
 
 ## 🚀 Quick Start
 
@@ -25,6 +58,8 @@ A modern, interactive web application designed to help high school students expl
 - Git
 - Oracle Cloud Infrastructure (OCI) account (free tier available)
 - OCI CLI installed and configured
+
+**Note**: This project uses the latest major versions of all dependencies including **React 19**, **Vite 6**, and **React Router 7**. These are cutting-edge versions with the latest features and performance improvements.
 
 ### Local Development
 
