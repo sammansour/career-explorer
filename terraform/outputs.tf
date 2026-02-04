@@ -8,6 +8,11 @@ output "namespace" {
   value       = data.oci_objectstorage_namespace.ns.namespace
 }
 
+output "region" {
+  description = "OCI region where resources are deployed"
+  value       = var.region
+}
+
 output "website_url" {
   description = "URL to access the static website"
   value       = "https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html"

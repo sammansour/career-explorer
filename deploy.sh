@@ -28,11 +28,13 @@ fi
 
 NAMESPACE=$(terraform output -raw namespace)
 BUCKET_NAME=$(terraform output -raw bucket_name)
+REGION=$(terraform output -raw region 2>/dev/null || echo "${OCI_REGION:-us-ashburn-1}")
 
 cd ..
 
 echo -e "${GREEN}✓ Namespace: $NAMESPACE${NC}"
 echo -e "${GREEN}✓ Bucket: $BUCKET_NAME${NC}"
+echo -e "${GREEN}✓ Region: $REGION${NC}"
 
 # Build the React application
 echo -e "${BLUE}🔨 Building React application...${NC}"
@@ -59,7 +61,7 @@ oci os object bulk-upload \
 echo -e "${GREEN}✓ Upload completed successfully${NC}"
 
 # Get the website URL
-WEBSITE_URL="https://objectstorage.${OCI_REGION:-us-ashburn-1}.oraclecloud.com/n/${NAMESPACE}/b/${BUCKET_NAME}/o/index.html"
+WEBSITE_URL="https://objectstorage.${REGION}.oraclecloud.com/n/${NAMESPACE}/b/${BUCKET_NAME}/o/index.html"
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
@@ -72,3 +74,15 @@ echo ""
 echo -e "Note: If you experience routing issues, you may need to configure"
 echo -e "a custom domain with proper routing rules for your SPA."
 echo ""
+
+# Optional: Show PAR URL if available
+if cd terraform && terraform output deployment_par_url >/dev/null 2>&1; then
+    PAR_URL=$(terraform output -raw deployment_par_url 2>/dev/null)
+    if [ -n "$PAR_URL" ]; then
+        echo -e "Deployment PAR URL (expires in 30 days):"
+        echo -e "${BLUE}$PAR_URL${NC}"
+        echo -e "Use this for authenticated uploads if needed."
+        echo ""
+    fi
+fi
+cd ..

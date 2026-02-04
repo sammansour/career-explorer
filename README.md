@@ -135,7 +135,9 @@ npm run preview
 
 ## ☁️ Deployment to OCI
 
-### Step 1: Set Up OCI CLI
+### Prerequisites: OCI Credentials Setup
+
+**Important**: You need OCI credentials for both Terraform and the deployment script. Follow these steps carefully:
 
 1. **Install OCI CLI**
    ```bash
@@ -154,16 +156,30 @@ npm run preview
    oci setup config
    ```
 
+   This will create:
+   - `~/.oci/config` - CLI configuration
+   - `~/.oci/oci_api_key.pem` - Your private API key
+   - Updates your user profile in OCI with the public key
+
    You'll need:
    - Your tenancy OCID
    - Your user OCID
    - Your region (e.g., us-ashburn-1)
-   - An API key pair (CLI can generate this for you)
+   - The CLI will generate an API key pair for you
 
 3. **Verify configuration**
    ```bash
    oci iam region list
    ```
+
+   **Troubleshooting Credentials**:
+   - Ensure your user has proper IAM policies for Object Storage operations
+   - Check that your API key fingerprint matches in OCI Console → Profile → User Settings
+   - Test with: `oci os ns get` (should return your namespace)
+
+### Step 1: Set Up OCI CLI (Completed Above)
+
+### Step 2: Set Up Terraform
 
 ### Step 2: Set Up Terraform
 
@@ -232,26 +248,39 @@ npm run preview
 
 ### Step 4: Deploy the Application
 
+**Automated Deployment (Recommended)**
+
 1. **Make the deploy script executable**
    ```bash
    chmod +x deploy.sh
    ```
 
-2. **Run the deployment**
+2. **Run the automated deployment**
    ```bash
    ./deploy.sh
    ```
 
-   This script will:
-   - Build your React application
-   - Upload all files to OCI Object Storage
-   - Display your website URL
+   The script automatically:
+   - ✅ Checks for required tools (npm, OCI CLI)
+   - ✅ Gets deployment configuration from Terraform outputs
+   - ✅ Builds your React application
+   - ✅ Uploads all files to OCI Object Storage
+   - ✅ Displays your website URL and PAR URL (if available)
+   - ✅ Provides error handling and colored output
 
 3. **Access your website**
    The script will display your website URL, something like:
    ```
    https://objectstorage.us-ashburn-1.oraclecloud.com/n/YOUR_NAMESPACE/b/career-explorer-prod/o/index.html
    ```
+
+   **Script Features:**
+   - Uses Terraform outputs for bucket details (no manual configuration needed)
+   - Supports Pre-Authenticated Requests (PAR) for alternative upload methods
+   - Includes error checking and helpful error messages
+   - Can be integrated into CI/CD pipelines
+
+**Note**: The script requires Terraform state to be present (`terraform.tfstate`) to read outputs. If you delete the state file, re-run `terraform apply` first.
 
 ## 🔄 Manual Deployment (Alternative)
 

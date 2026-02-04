@@ -57,24 +57,4 @@ resource "oci_objectstorage_preauthrequest" "deployment_par" {
   }
 }
 
-# Example: Upload index.html (you'll upload the full dist folder separately)
-# This is just to demonstrate the pattern - actual deployment should be done via script
-resource "oci_objectstorage_object" "index_html" {
-  namespace = data.oci_objectstorage_namespace.ns.namespace
-  bucket    = oci_objectstorage_bucket.website_bucket.name
-  object    = "index.html"
-  source    = "../dist/index.html"
-  
-  # This will only upload if the file exists after build
-  # In practice, use the deploy script instead
-  
-  lifecycle {
-    ignore_changes = [
-      source,
-      content,
-      metadata
-    ]
-  }
 
-  depends_on = [oci_objectstorage_bucket.website_bucket]
-}
