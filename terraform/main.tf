@@ -63,7 +63,7 @@ resource "oci_objectstorage_object" "index_html" {
   namespace = data.oci_objectstorage_namespace.ns.namespace
   bucket    = oci_objectstorage_bucket.website_bucket.name
   object    = "index.html"
-  source    = "https://objectstorage.us-chicago-1.oraclecloud.com/p/hAbCuLMw9M4WjyqSpMpn3foiqh4zzuh0ijUez6RsjIEB781l8TsNFV0ErimD4tJR/n/axmhqnm6m40e/b/dtech_bucket/o/dist/index.html"
+  source    = "../dist/index.html"
   
   # This will only upload if the file exists after build
   # In practice, use the deploy script instead
