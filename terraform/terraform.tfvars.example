@@ -8,7 +8,7 @@ fingerprint      = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
 private_key_path = "~/.oci/oci_api_key.pem"
 
 # Region and Compartment
-region           = "us-ashburn-1"  # Change to your preferred region
+region           = "us-chicago-1"  # Change to your preferred region
 compartment_ocid = "ocid1.compartment.oc1..example"
 
 # Project Configuration
