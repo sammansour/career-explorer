@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',
+  // Use relative base so built assets resolve regardless of host path
+  base: './',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

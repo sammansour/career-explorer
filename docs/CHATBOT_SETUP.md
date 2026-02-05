@@ -60,22 +60,31 @@ Download from https://github.com/fnproject/cli/releases
 fn version
 ```
 
-### Install Docker
+### Install Podman
 
 **macOS:**
 ```bash
-brew install docker
-# Or download Docker Desktop from https://www.docker.com/products/docker-desktop
+brew install podman
+podman machine init
+podman machine start
 ```
 
 **Linux:**
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+sudo dnf install podman  # or apt install podman
+podman --version
 ```
 
 **Windows:**
-Download Docker Desktop from https://www.docker.com/products/docker-desktop
+Download Podman Desktop from https://podman.io/downloads
+
+**Verify:**
+```bash
+podman --version
+podman info
+```
+
+Note: On macOS, Podman runs in a VM; ensure `podman machine start` is run before deploying.
 
 ---
 
@@ -177,13 +186,13 @@ TENANCY_NAMESPACE=$(oci os ns get --query data --raw-output)
 
 # Configure Fn CLI
 fn update context oracle.compartment-id <YOUR_COMPARTMENT_OCID>
-fn update context api-url https://functions.us-ashburn-1.oraclecloud.com
-fn update context registry us-ashburn-1.ocir.io/${TENANCY_NAMESPACE}/career-explorer
+fn update context api-url https://functions.us-chicago-1.oraclecloud.com
+fn update context registry us-chicago-1.ocir.io/${TENANCY_NAMESPACE}/career-explorer
 
 # Use your OCI region instead of us-ashburn-1 if different
 ```
 
-### Generate Auth Token for Docker
+### Generate Auth Token for Podman
 
 1. Go to OCI Console → Profile → User Settings
 2. Click "Auth Tokens" → "Generate Token"
@@ -191,7 +200,7 @@ fn update context registry us-ashburn-1.ocir.io/${TENANCY_NAMESPACE}/career-expl
 4. Login to OCIR:
 
 ```bash
-docker login us-ashburn-1.ocir.io
+podman login us-chicago-1.ocir.io
 # Username: <TENANCY_NAMESPACE>/your-username
 # Password: <AUTH_TOKEN>
 ```
@@ -209,8 +218,8 @@ cd oci-functions/career-counselor
 ### Deploy Function
 
 ```bash
-# Deploy to the application created by Terraform
-fn -v deploy --app career-explorer-chatbot-prod
+# Deploy to the application created by Terraform using Podman
+fn -v deploy --app career-explorer-chatbot-prod --container-runtime podman
 ```
 
 **Note:** Replace `career-explorer-chatbot-prod` with your actual application name from Terraform output.

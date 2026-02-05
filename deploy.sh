@@ -50,15 +50,65 @@ echo -e "${GREEN}✓ Build completed successfully${NC}"
 # Upload to Object Storage
 echo -e "${BLUE}☁️  Uploading to OCI Object Storage...${NC}"
 
+# Inject <base> tag so assets load from Object Storage when index.html is served via API Gateway
+# Compute bucket base URL from Terraform outputs
+BUCKET_BASE_URL=$(cd terraform && terraform output -raw bucket_url 2>/dev/null)
+if [ -n "$BUCKET_BASE_URL" ] && [ -f "dist/index.html" ]; then
+  # Ensure trailing slash
+  if [[ "$BUCKET_BASE_URL" != */ ]]; then
+    BUCKET_BASE_URL="$BUCKET_BASE_URL/"
+  fi
+  # Insert base tag after <head> if not already present
+  if ! grep -q "<base href=\"" dist/index.html; then
+    # macOS/BSD sed in-place edit
+    sed -i '' "s#<head>#<head>\n    <base href=\"${BUCKET_BASE_URL}\">#" dist/index.html || true
+    echo -e "${GREEN}✓ Injected <base> tag pointing to ${BUCKET_BASE_URL}${NC}"
+  fi
+fi
+
 # Upload all files from dist directory
 oci os object bulk-upload \
     --namespace "$NAMESPACE" \
     --bucket-name "$BUCKET_NAME" \
     --src-dir ./dist \
-    --overwrite \
-    --no-progress-bar
+    --overwrite
 
 echo -e "${GREEN}✓ Upload completed successfully${NC}"
+
+# Ensure correct Content-Type on objects by re-uploading with explicit MIME (avoids octet-stream + nosniff blocking)
+echo -e "${BLUE}🧩 Setting Content-Type by re-uploading objects...${NC}"
+
+mime_for() {
+  case "$1" in
+    *.html) echo "text/html" ;;
+    *.css) echo "text/css" ;;
+    *.js) echo "application/javascript" ;;
+    *.mjs) echo "application/javascript" ;;
+    *.json) echo "application/json" ;;
+    *.svg) echo "image/svg+xml" ;;
+    *.png) echo "image/png" ;;
+    *.jpg|*.jpeg) echo "image/jpeg" ;;
+    *.gif) echo "image/gif" ;;
+    *.ico) echo "image/x-icon" ;;
+    *) echo "application/octet-stream" ;;
+  esac
+}
+
+find dist -type f | while IFS= read -r f; do
+  key="${f#dist/}"
+  mime=$(mime_for "$f")
+  oci os object put \
+    --namespace "$NAMESPACE" \
+    --bucket-name "$BUCKET_NAME" \
+    --name "$key" \
+    --file "$f" \
+    --force \
+    --content-type "$mime" >/dev/null && \
+    echo -e "${GREEN}✓ Uploaded $key with Content-Type=$mime${NC}" || \
+    echo -e "${RED}Failed to upload $key with explicit Content-Type${NC}"
+done
+
+echo -e "${GREEN}✓ Content-Type set on all objects${NC}"
 
 # Get the website URL
 WEBSITE_URL="https://objectstorage.${REGION}.oraclecloud.com/n/${NAMESPACE}/b/${BUCKET_NAME}/o/index.html"

@@ -1,8 +1,19 @@
-import axios from 'axios';
+/**
+ * AI Career Counselor API Client
+ *
+ * Calls the API Gateway /chat endpoint to avoid CORS issues and remove the
+ * need for Fn-Intent headers. You can override the endpoint via the Vite env
+ * var VITE_CHATBOT_API_URL. If not set, we default to same-origin "/chat",
+ * which works when the SPA is hosted behind the same API Gateway domain.
+ */
 
-// Get API endpoint from environment variable
-// In production, this will be your OCI Function endpoint
-const API_ENDPOINT = import.meta.env.VITE_CHATBOT_API_URL || 'http://localhost:8080';
+// Resolve endpoint: use env override or default to same-origin /chat (Vite exposes import.meta.env)
+const API_BASE = (import.meta && import.meta.env && import.meta.env.VITE_CHATBOT_API_URL)
+  ? import.meta.env.VITE_CHATBOT_API_URL
+  : '/chat';
+
+// Ensure trailing slash so it hits /chat/ which matches the API Gateway route
+const API_ENDPOINT = API_BASE.endsWith('/') ? API_BASE : `${API_BASE}/`;
 
 /**
  * Send a message to the AI career counselor
@@ -13,32 +24,37 @@ const API_ENDPOINT = import.meta.env.VITE_CHATBOT_API_URL || 'http://localhost:8
  */
 export const sendMessage = async (message, careerId = null, history = []) => {
   try {
-    const response = await axios.post(API_ENDPOINT, {
-      message,
-      careerId,
-      history
-    }, {
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 30000 // 30 second timeout
+      body: JSON.stringify({
+        message,
+        careerId,
+        history
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     return {
       success: true,
-      data: response.data
+      data: data
     };
   } catch (error) {
     console.error('Error sending message to chatbot:', error);
-    
+
     let errorMessage = 'Unable to connect to the career counselor. Please try again.';
-    
-    if (error.response) {
-      // Server responded with error
-      errorMessage = error.response.data?.error || 'An error occurred processing your request.';
-    } else if (error.request) {
-      // Request made but no response
-      errorMessage = 'No response from server. Please check your connection.';
+
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      errorMessage = 'Network error. Please check your internet connection.';
+    } else if (error.message.includes('500')) {
+      errorMessage = 'Server error. The career counselor is temporarily unavailable.';
     }
 
     return {
@@ -54,10 +70,22 @@ export const sendMessage = async (message, careerId = null, history = []) => {
  */
 export const checkApiHealth = async () => {
   try {
-    // Try a simple health check (you can implement this in the function)
-    const response = await axios.get(API_ENDPOINT, { timeout: 5000 });
-    return response.status === 200;
+    // Simple health check by making a basic request
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: "ping",
+        careerId: null,
+        history: []
+      })
+    });
+
+    return response.ok;
   } catch (error) {
+    console.error('Health check failed:', error);
     return false;
   }
 };

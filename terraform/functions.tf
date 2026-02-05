@@ -122,15 +122,6 @@ resource "oci_apigateway_deployment" "chatbot_deployment" {
         function_id = var.chatbot_function_ocid # Will be set after function deployment
       }
 
-      request_policies {
-        header_validations {
-          headers {
-            name     = "Content-Type"
-            required = true
-          }
-        }
-      }
-
       response_policies {
         header_transformations {
           set_headers {
@@ -149,3 +140,151 @@ resource "oci_apigateway_deployment" "chatbot_deployment" {
     "Environment" = var.environment
   }
 }
+
+# Website Hosting via API Gateway -> Object Storage (serves SPA)
+resource "oci_apigateway_deployment" "website_deployment" {
+  compartment_id = var.compartment_ocid
+  gateway_id     = oci_apigateway_gateway.chatbot_gateway.id
+  # Serve website under /site to avoid root (/) prefix conflict
+  path_prefix    = "/site"
+  display_name   = "${var.project_name}-website-${var.environment}"
+
+  specification {
+    # Route: GET /  -> serve index.html (assets referenced via absolute Object Storage URLs)
+    routes {
+      path    = "/"
+      methods = ["GET"]
+
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html"
+      }
+
+      response_policies {
+        header_transformations {
+          set_headers {
+            items {
+              name   = "Content-Type"
+              values = ["text/html; charset=utf-8"]
+            }
+            items {
+              name   = "Content-Disposition"
+              values = ["inline"]
+            }
+          }
+        }
+      }
+    }
+
+    # SPA fallback: /{path}
+    routes {
+      path    = "/{path}"
+      methods = ["GET"]
+
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html"
+      }
+
+      response_policies {
+        header_transformations {
+          set_headers {
+            items {
+              name   = "Content-Type"
+              values = ["text/html; charset=utf-8"]
+            }
+            items {
+              name   = "Content-Disposition"
+              values = ["inline"]
+            }
+          }
+        }
+      }
+    }
+
+    # SPA fallback: /{path1}/{path2}
+    routes {
+      path    = "/{path1}/{path2}"
+      methods = ["GET"]
+
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html"
+      }
+
+      response_policies {
+        header_transformations {
+          set_headers {
+            items {
+              name   = "Content-Type"
+              values = ["text/html; charset=utf-8"]
+            }
+            items {
+              name   = "Content-Disposition"
+              values = ["inline"]
+            }
+          }
+        }
+      }
+    }
+
+    # SPA fallback: /{path1}/{path2}/{path3}
+    routes {
+      path    = "/{path1}/{path2}/{path3}"
+      methods = ["GET"]
+
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html"
+      }
+
+      response_policies {
+        header_transformations {
+          set_headers {
+            items {
+              name   = "Content-Type"
+              values = ["text/html; charset=utf-8"]
+            }
+            items {
+              name   = "Content-Disposition"
+              values = ["inline"]
+            }
+          }
+        }
+      }
+    }
+
+    # SPA fallback: /{path1}/{path2}/{path3}/{path4}
+    routes {
+      path    = "/{path1}/{path2}/{path3}/{path4}"
+      methods = ["GET"]
+
+      backend {
+        type = "HTTP_BACKEND"
+        url  = "https://objectstorage.${var.region}.oraclecloud.com/n/${data.oci_objectstorage_namespace.ns.namespace}/b/${oci_objectstorage_bucket.website_bucket.name}/o/index.html"
+      }
+
+      response_policies {
+        header_transformations {
+          set_headers {
+            items {
+              name   = "Content-Type"
+              values = ["text/html; charset=utf-8"]
+            }
+            items {
+              name   = "Content-Disposition"
+              values = ["inline"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  freeform_tags = {
+    "Project"     = var.project_name
+    "Environment" = var.environment
+  }
+}
+
+ 

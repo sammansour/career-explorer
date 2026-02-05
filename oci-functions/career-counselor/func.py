@@ -2,7 +2,30 @@ import io
 import json
 import logging
 import os
-from fdk import response
+from typing import Optional
+
+# Attempt to import Oracle Functions FDK. In local dev environments where the
+# fdk package isn't installed, provide a lightweight fallback to satisfy
+# linters/IDE (Pylance) and allow local testing of pure-Python logic.
+try:
+    from fdk import response  # type: ignore
+except Exception:  # pragma: no cover - fallback for local tooling only
+    class _FallbackResponse:
+        def __init__(self, ctx, response_data="", headers=None, status_code=200):
+            self.ctx = ctx
+            self.response_data = response_data
+            self.headers = headers or {}
+            self.status_code = status_code
+
+        def __repr__(self):
+            return (
+                f"_FallbackResponse(status_code={self.status_code}, "
+                f"headers={self.headers}, response_data={self.response_data!r})"
+            )
+
+    class response:  # noqa: N801 - mimic module with Response class
+        Response = _FallbackResponse
+
 from openai import OpenAI
 
 # Career data embedded for context
@@ -121,104 +144,68 @@ Recommended Degrees: {', '.join(career['degrees'])}
 """
     return ""
 
-def handler(ctx, data: io.BytesIO = None):
+def handler(ctx, data: Optional[io.BytesIO] = None):
     """
     OCI Function handler for AI Career Counselor
+    - Handles CORS preflight (OPTIONS)
+    - Echo-style POST to verify end-to-end pathway via API Gateway
+    - OpenAI call can be re-enabled once end-to-end is verified
     """
+    logger = logging.getLogger()
     try:
-        # Get OpenAI API key from environment
-        openai_api_key = os.getenv('OPENAI_API_KEY')
-        if not openai_api_key:
-            return response.Response(
-                ctx,
-                response_data=json.dumps({"error": "OpenAI API key not configured"}),
-                headers={"Content-Type": "application/json"},
-                status_code=500
-            )
+        def cors_headers():
+            return {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Max-Age": "86400",
+                "Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+            }
 
-        # Parse request body
-        try:
-            body = json.loads(data.getvalue())
-        except (ValueError, AttributeError):
-            return response.Response(
-                ctx,
-                response_data=json.dumps({"error": "Invalid JSON in request body"}),
-                headers={"Content-Type": "application/json"},
-                status_code=400
-            )
+        method = getattr(ctx, "Method", "POST") if ctx else "POST"
+        logger.info(f"Method: {method}")
 
-        user_message = body.get('message', '').strip()
-        career_id = body.get('careerId')
-        conversation_history = body.get('history', [])
-        
+        # Preflight
+        if str(method).upper() == "OPTIONS":
+            return response.Response(ctx, response_data="", headers=cors_headers(), status_code=204)
+
+        # Parse JSON
+        body = {}
+        if data and hasattr(data, "getvalue"):
+            raw = data.getvalue()
+            if isinstance(raw, (bytes, bytearray)):
+                raw = raw.decode("utf-8", errors="ignore")
+            if raw:
+                try:
+                    body = json.loads(raw)
+                except Exception as e:
+                    logger.warning(f"Invalid JSON: {e}")
+                    return response.Response(ctx, response_data=json.dumps({"error": "Invalid JSON"}), headers=cors_headers(), status_code=400)
+
+        # Minimal echo until LLM wired
+        user_message = (body.get("message") or "").strip()
         if not user_message:
-            return response.Response(
-                ctx,
-                response_data=json.dumps({"error": "Message is required"}),
-                headers={"Content-Type": "application/json"},
-                status_code=400
-            )
+            return response.Response(ctx, response_data=json.dumps({"error": "Message is required"}), headers=cors_headers(), status_code=400)
 
-        # Initialize OpenAI client
-        client = OpenAI(api_key=openai_api_key)
+        result = {
+            "message": f"Echo: {user_message}",
+            "careerId": body.get("careerId"),
+            "history_len": len(body.get("history", []) or []),
+        }
 
-        # Build messages for OpenAI
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
-        # Add career context if available
-        career_context = get_career_context(career_id)
-        if career_context:
-            messages.append({
-                "role": "system",
-                "content": f"The student is currently viewing: {career_context}"
-            })
+        return response.Response(ctx, response_data=json.dumps(result), headers=cors_headers(), status_code=200)
 
-        # Add conversation history (limit to last 10 messages to manage tokens)
-        for msg in conversation_history[-10:]:
-            messages.append({
-                "role": msg.get("role", "user"),
-                "content": msg.get("content", "")
-            })
-
-        # Add current user message
-        messages.append({"role": "user", "content": user_message})
-
-        # Call OpenAI API
-        chat_completion = client.chat.completions.create(
-            model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),  # Default to GPT-4o-mini (cheaper)
-            messages=messages,
-            max_tokens=500,
-            temperature=0.7,
-            presence_penalty=0.1,
-            frequency_penalty=0.1
-        )
-
-        assistant_message = chat_completion.choices[0].message.content
-
-        # Return response
+    except Exception as e:
+        logger.error(f"Unhandled error: {e}")
         return response.Response(
             ctx,
-            response_data=json.dumps({
-                "message": assistant_message,
-                "careerId": career_id,
-                "timestamp": chat_completion.created
-            }),
+            response_data=json.dumps({"error": "An error occurred processing your request", "details": str(e)}),
             headers={
                 "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            }
-        )
-
-    except Exception as e:
-        logging.getLogger().error(f"Error in career counselor function: {str(e)}")
-        return response.Response(
-            ctx,
-            response_data=json.dumps({
-                "error": "An error occurred processing your request",
-                "details": str(e)
-            }),
-            headers={"Content-Type": "application/json"},
-            status_code=500
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            },
+            status_code=500,
         )
