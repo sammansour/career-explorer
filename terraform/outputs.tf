@@ -85,7 +85,7 @@ output "deployment_instructions" {
   2. Configure Fn CLI:
      fn update context oracle.compartment-id ${var.compartment_ocid}
      fn update context api-url https://functions.${var.region}.oraclecloud.com
-     fn update context registry ${var.region}.ocir.io/YOUR_TENANCY_NAMESPACE/career-explorer
+     fn update context registry ${var.region}.ocir.io/axmhqnm6m40e/career-explorer
   
   3. Deploy the function:
      cd oci-functions/career-counselor
