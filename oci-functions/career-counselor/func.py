@@ -148,8 +148,7 @@ def handler(ctx, data: Optional[io.BytesIO] = None):
     """
     OCI Function handler for AI Career Counselor
     - Handles CORS preflight (OPTIONS)
-    - Echo-style POST to verify end-to-end pathway via API Gateway
-    - OpenAI call can be re-enabled once end-to-end is verified
+    - Calls OpenAI API with career context and conversation history
     """
     logger = logging.getLogger()
     try:
@@ -183,15 +182,55 @@ def handler(ctx, data: Optional[io.BytesIO] = None):
                     logger.warning(f"Invalid JSON: {e}")
                     return response.Response(ctx, response_data=json.dumps({"error": "Invalid JSON"}), headers=cors_headers(), status_code=400)
 
-        # Minimal echo until LLM wired
         user_message = (body.get("message") or "").strip()
         if not user_message:
             return response.Response(ctx, response_data=json.dumps({"error": "Message is required"}), headers=cors_headers(), status_code=400)
 
+        career_id = body.get("careerId")
+        history = body.get("history") or []
+
+        # Get OpenAI config from function application config
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+
+        if not api_key:
+            logger.error("OPENAI_API_KEY not configured")
+            return response.Response(
+                ctx,
+                response_data=json.dumps({"error": "OpenAI API key not configured"}),
+                headers=cors_headers(),
+                status_code=500,
+            )
+
+        # Build messages for OpenAI
+        career_context = get_career_context(career_id)
+        system_content = SYSTEM_PROMPT
+        if career_context:
+            system_content += f"\n\n{career_context}"
+
+        messages = [{"role": "system", "content": system_content}]
+
+        # Add conversation history (last 10 exchanges)
+        for msg in history[-10:]:
+            if msg.get("role") in ("user", "assistant") and msg.get("content"):
+                messages.append({"role": msg["role"], "content": msg["content"]})
+
+        messages.append({"role": "user", "content": user_message})
+
+        # Call OpenAI
+        client = OpenAI(api_key=api_key)
+        completion = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=500,
+            temperature=0.7,
+        )
+
+        assistant_message = completion.choices[0].message.content
+
         result = {
-            "message": f"Echo: {user_message}",
-            "careerId": body.get("careerId"),
-            "history_len": len(body.get("history", []) or []),
+            "message": assistant_message,
+            "careerId": career_id,
         }
 
         return response.Response(ctx, response_data=json.dumps(result), headers=cors_headers(), status_code=200)

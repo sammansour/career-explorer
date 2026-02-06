@@ -57,5 +57,5 @@ variable "openai_model" {
 variable "chatbot_function_ocid" {
   description = "OCID of the deployed chatbot function (set after manual function deployment)"
   type        = string
-  default     = "ocid1.fnapp.oc1.us-chicago-1.amaaaaaaetq6yxaarwjyfagunp2enzyrhfj2egqs5eecnantoov3eovflkxq"
+  default     = ""
 }
