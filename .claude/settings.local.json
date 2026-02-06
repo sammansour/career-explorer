@@ -20,7 +20,9 @@
       "Bash(git remote set-url:*)",
       "Bash(docker:*)",
       "Bash(podman:*)",
-      "Bash(oci:*)"
+      "Bash(oci:*)",
+      "Bash(fn version:*)",
+      "Bash(sudo rm:*)"
     ]
   }
 }
