@@ -21,7 +21,7 @@ variable "private_key_path" {
 variable "region" {
   description = "OCI region"
   type        = string
-  default     = "us-ashburn-1"
+  default     = "us-chicago-1"
 }
 
 variable "compartment_ocid" {

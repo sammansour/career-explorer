@@ -17,20 +17,26 @@ NC='\033[0m' # No Color
 command -v npm >/dev/null 2>&1 || { echo -e "${RED}npm is required but not installed. Aborting.${NC}" >&2; exit 1; }
 command -v oci >/dev/null 2>&1 || { echo -e "${RED}OCI CLI is required but not installed. Please install it first.${NC}" >&2; exit 1; }
 
-# Get bucket details from Terraform output
+# Get bucket details from Terraform output or environment / defaults
 echo -e "${BLUE}📦 Getting deployment configuration...${NC}"
-cd terraform
 
-if [ ! -f "terraform.tfstate" ]; then
-    echo -e "${RED}Terraform state not found. Please run 'terraform apply' first.${NC}"
-    exit 1
+if [ -f "terraform/terraform.tfstate" ]; then
+    cd terraform
+    NAMESPACE=$(terraform output -raw namespace)
+    BUCKET_NAME=$(terraform output -raw bucket_name)
+    REGION=$(terraform output -raw region 2>/dev/null || echo "${OCI_REGION:-us-chicago-1}")
+    cd ..
+else
+    echo -e "${BLUE}Terraform state not found. Using environment variables or OCI CLI...${NC}"
+    NAMESPACE="${OCI_NAMESPACE:-$(oci os ns get --query data --raw-output 2>/dev/null)}"
+    BUCKET_NAME="${OCI_BUCKET_NAME:-career-explorer-website-prod}"
+    REGION="${OCI_REGION:-us-chicago-1}"
+
+    if [ -z "$NAMESPACE" ]; then
+        echo -e "${RED}Could not determine namespace. Set OCI_NAMESPACE or run 'terraform apply' first.${NC}"
+        exit 1
+    fi
 fi
-
-NAMESPACE=$(terraform output -raw namespace)
-BUCKET_NAME=$(terraform output -raw bucket_name)
-REGION=$(terraform output -raw region 2>/dev/null || echo "${OCI_REGION:-us-ashburn-1}")
-
-cd ..
 
 echo -e "${GREEN}✓ Namespace: $NAMESPACE${NC}"
 echo -e "${GREEN}✓ Bucket: $BUCKET_NAME${NC}"
@@ -51,8 +57,8 @@ echo -e "${GREEN}✓ Build completed successfully${NC}"
 echo -e "${BLUE}☁️  Uploading to OCI Object Storage...${NC}"
 
 # Inject <base> tag so assets load from Object Storage when index.html is served via API Gateway
-# Compute bucket base URL from Terraform outputs
-BUCKET_BASE_URL=$(cd terraform && terraform output -raw bucket_url 2>/dev/null)
+# Compute bucket base URL from Terraform outputs or construct it
+BUCKET_BASE_URL=$(cd terraform && terraform output -raw bucket_url 2>/dev/null || echo "https://objectstorage.${REGION}.oraclecloud.com/n/${NAMESPACE}/b/${BUCKET_NAME}/o")
 if [ -n "$BUCKET_BASE_URL" ] && [ -f "dist/index.html" ]; then
   # Ensure trailing slash
   if [[ "$BUCKET_BASE_URL" != */ ]]; then
@@ -126,13 +132,15 @@ echo -e "a custom domain with proper routing rules for your SPA."
 echo ""
 
 # Optional: Show PAR URL if available
-if cd terraform && terraform output deployment_par_url >/dev/null 2>&1; then
-    PAR_URL=$(terraform output -raw deployment_par_url 2>/dev/null)
-    if [ -n "$PAR_URL" ]; then
-        echo -e "Deployment PAR URL (expires in 30 days):"
-        echo -e "${BLUE}$PAR_URL${NC}"
-        echo -e "Use this for authenticated uploads if needed."
-        echo ""
+if [ -f "terraform/terraform.tfstate" ]; then
+    if cd terraform && terraform output deployment_par_url >/dev/null 2>&1; then
+        PAR_URL=$(terraform output -raw deployment_par_url 2>/dev/null)
+        if [ -n "$PAR_URL" ]; then
+            echo -e "Deployment PAR URL (expires in 30 days):"
+            echo -e "${BLUE}$PAR_URL${NC}"
+            echo -e "Use this for authenticated uploads if needed."
+            echo ""
+        fi
     fi
+    cd ..
 fi
-cd ..

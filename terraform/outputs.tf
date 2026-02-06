@@ -79,26 +79,39 @@ output "deployment_instructions" {
   
   STEP 2: Deploy the AI Career Counselor Function
   ------------------------------------------------
-  1. Install Fn CLI:
-     curl -LSs https://raw.githubusercontent.com/fnproject/cli/master/install | sh
-  
-  2. Configure Fn CLI:
+  Prerequisites:
+     brew install podman fn
+     podman machine init && podman machine start
+
+  1. Configure Fn CLI:
+     fn create context ${var.region} --provider oracle
+     fn use context ${var.region}
      fn update context oracle.compartment-id ${var.compartment_ocid}
      fn update context api-url https://functions.${var.region}.oraclecloud.com
-     fn update context registry ${var.region}.ocir.io/axmhqnm6m40e/career-explorer
-  
+     fn update context registry ${var.region}.ocir.io/${data.oci_objectstorage_namespace.ns.namespace}/career-explorer
+
+  2. Log in to OCIR (generate Auth Token in OCI Console → Profile → Auth Tokens):
+     podman login ${var.region}.ocir.io
+
   3. Deploy the function:
      cd oci-functions/career-counselor
      fn -v deploy --app ${oci_functions_application.career_counselor_app.display_name}
-  
+
   4. Get the function OCID:
      fn list functions ${oci_functions_application.career_counselor_app.display_name}
-  
+
   5. Update terraform.tfvars with the function OCID:
      chatbot_function_ocid = "ocid1.fnfunc.oc1..."
-  
+
   6. Apply Terraform again to link the API Gateway:
      terraform apply
+
+  IMPORTANT: Create an IAM policy to allow API Gateway to invoke functions:
+     oci iam policy create \
+       --compartment-id ${var.compartment_ocid} \
+       --name "api-gateway-invoke-functions" \
+       --description "Allow API Gateway to invoke Functions" \
+       --statements '["ALLOW any-user to use functions-family in compartment id ${var.compartment_ocid} where ALL {request.principal.type = \u0027ApiGateway\u0027, request.resource.compartment.id = \u0027${var.compartment_ocid}\u0027}"]'
   
   
   STEP 3: Access Your Application

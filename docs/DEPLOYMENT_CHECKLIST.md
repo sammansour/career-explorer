@@ -20,7 +20,7 @@ Use this checklist to ensure a smooth deployment to Oracle Cloud Infrastructure 
   - [ ] Tenancy OCID
   - [ ] User OCID
   - [ ] API key fingerprint
-  - [ ] Region (e.g., us-ashburn-1)
+  - [ ] Region (e.g., us-chicago-1)
   - [ ] Private key path
 - [ ] Verified OCI CLI works: `oci iam region list`
 
@@ -109,6 +109,67 @@ Use this checklist to ensure a smooth deployment to Oracle Cloud Infrastructure 
 - [ ] No console errors
 - [ ] All images/assets load
 
+## AI Career Counselor Chatbot Deployment (v3.0.0+)
+
+### Prerequisites
+- [ ] Installed Podman: `brew install podman`
+- [ ] Installed Fn CLI: `brew install fn`
+- [ ] Started Podman VM: `podman machine init && podman machine start`
+- [ ] Created Docker compatibility wrapper (see `docs/CHATBOT_SETUP.md`)
+- [ ] Verified wrapper works: `docker version` shows "20.10.0"
+- [ ] Have OpenAI API key
+
+### Step 1: Configure Fn CLI
+- [ ] Created Fn CLI context: `fn create context <region> --provider oracle`
+- [ ] Set context active: `fn use context <region>`
+- [ ] Set compartment: `fn update context oracle.compartment-id <COMPARTMENT_OCID>`
+- [ ] Set API URL: `fn update context api-url https://functions.<region>.oraclecloud.com`
+- [ ] Set registry: `fn update context registry <region>.ocir.io/<namespace>/career-explorer`
+
+### Step 2: Login to OCIR
+- [ ] Generated Auth Token (OCI Console → Profile → Auth Tokens)
+- [ ] Logged in: `podman login <region>.ocir.io`
+
+### Step 3: Deploy Function
+- [ ] Navigated to function directory: `cd oci-functions/career-counselor`
+- [ ] Deployed: `fn -v deploy --app career-explorer-chatbot-prod`
+- [ ] Deployment succeeded
+- [ ] Got function OCID: `fn list functions career-explorer-chatbot-prod`
+
+### Step 4: Link API Gateway
+- [ ] Updated `terraform.tfvars` with function OCID
+- [ ] Ran `terraform apply`
+- [ ] API Gateway linked to function
+
+### Step 5: Create IAM Policy (Required!)
+- [ ] Created IAM policy allowing API Gateway to invoke functions:
+  ```bash
+  oci iam policy create \
+    --compartment-id <COMPARTMENT_OCID> \
+    --name "api-gateway-invoke-functions" \
+    --description "Allow API Gateway to invoke Functions" \
+    --statements '["ALLOW any-user to use functions-family in compartment id <COMPARTMENT_OCID> where ALL {request.principal.type = '"'"'ApiGateway'"'"', request.resource.compartment.id = '"'"'<COMPARTMENT_OCID>'"'"'}"]'
+  ```
+
+### Step 6: Configure Frontend
+- [ ] Created `.env` with `VITE_CHATBOT_API_URL=<API_GATEWAY_URL>`
+- [ ] Rebuilt frontend: `npm run build`
+
+### Step 7: Redeploy Frontend
+- [ ] Uploaded dist to Object Storage with correct MIME types
+- [ ] Verified site renders (not downloads) in browser
+
+### Step 8: Test Chatbot
+- [ ] Chat button appears on the page
+- [ ] Test via curl:
+  ```bash
+  curl -X POST <API_GATEWAY_URL> \
+    -H "Content-Type: application/json" \
+    -d '{"message": "Hello", "careerId": null, "history": []}'
+  ```
+- [ ] AI responds with career counselor greeting
+- [ ] Chat works on the live site
+
 ## Post-Deployment
 
 ### Documentation
@@ -131,23 +192,28 @@ Use this checklist to ensure a smooth deployment to Oracle Cloud Infrastructure 
 - [ ] Reviewed bucket permissions
 - [ ] Configured appropriate access controls
 
-## Troubleshooting Completed
+## Known Issues & Solutions
 
-If you encountered issues, document solutions here:
+**Issue: Fn CLI says "please upgrade Docker to 17.5.0"**
+- Solution: Create a Docker compatibility wrapper script at `/usr/local/bin/docker` that intercepts version checks and returns a Docker-compatible version string. See `docs/CHATBOT_SETUP.md` for the wrapper script.
 
-- [ ] Issue 1: _______________
-  - Solution: _______________
+**Issue: API Gateway returns 500 Internal Server Error**
+- Solution: Create an IAM policy allowing API Gateway to invoke functions (Step 5 above). Without this policy, API Gateway cannot call the function even though `fn invoke` works.
 
-- [ ] Issue 2: _______________
-  - Solution: _______________
+**Issue: HTML downloads instead of rendering**
+- Solution: `oci os object bulk-upload` sets all Content-Types to `application/octet-stream`. Re-upload files with explicit `--content-type` per file extension, or use `./deploy.sh` which handles MIME types automatically.
+
+**Issue: OCI Cloud Shell can't pull container images**
+- Solution: Cloud Shell has networking restrictions. Deploy locally with Podman instead.
 
 ## Future Updates
 
 For future deployments:
 - [ ] Make code changes
-- [ ] Test locally
-- [ ] Run `npm run build`
-- [ ] Run `./deploy.sh`
+- [ ] Test locally: `npm run dev`
+- [ ] Rebuild: `npm run build`
+- [ ] Deploy frontend: `./deploy.sh`
+- [ ] If function code changed: `cd oci-functions/career-counselor && fn -v deploy --app career-explorer-chatbot-prod`
 - [ ] Verify changes live
 
 ## Rollback Plan
@@ -183,6 +249,7 @@ Notes:
 - [ ] All checklist items completed
 - [ ] Application deployed successfully
 - [ ] Website accessible and functioning
+- [ ] Chatbot responding to queries
 - [ ] Team notified (if applicable)
 - [ ] Documentation updated
 

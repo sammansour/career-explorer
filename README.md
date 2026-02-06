@@ -2,7 +2,7 @@
 
 A modern, interactive web application designed to help high school students explore career paths, discover salary potential, and plan their educational journey. Built with React, Tailwind CSS, and Framer Motion, deployed on Oracle Cloud Infrastructure (OCI).
 
-![CareerExplorer](https://img.shields.io/badge/Version-3.0.0-brightgreen)
+![CareerExplorer](https://img.shields.io/badge/Version-3.0.1-brightgreen)
 ![React](https://img.shields.io/badge/React-19.0.0-blue)
 ![Tailwind](https://img.shields.io/badge/Tailwind-3.4.17-38B2AC)
 ![ESLint](https://img.shields.io/badge/ESLint-9.17.0-4B32C3)
@@ -87,25 +87,39 @@ Would you like to know more about any specific program?"
 career-explorer/
 ├── src/
 │   ├── components/          # React components
-│   │   └── Header.jsx       # Navigation header
+│   │   ├── Header.jsx       # Navigation header
+│   │   ├── ChatButton.jsx   # Floating chat button
+│   │   └── ChatWindow.jsx   # Chat interface
 │   ├── pages/               # Page components
 │   │   ├── Home.jsx         # Landing page
 │   │   ├── ExploreCareers.jsx   # Career browsing
 │   │   ├── CareerDetail.jsx     # Individual career pages
 │   │   ├── Quiz.jsx         # Interactive quiz
 │   │   └── Favorites.jsx    # Saved careers
+│   ├── utils/
+│   │   └── chatApi.js       # Chatbot API client
 │   ├── data/
 │   │   └── careers.js       # Career database
 │   ├── styles/
 │   │   └── index.css        # Global styles
 │   ├── App.jsx              # Main app component
 │   └── main.jsx             # Entry point
+├── oci-functions/           # Serverless functions
+│   └── career-counselor/    # AI chatbot function
+│       ├── func.py          # Python handler (OpenAI integration)
+│       ├── func.yaml        # Function config
+│       ├── Dockerfile       # Container build
+│       └── requirements.txt # Python dependencies
 ├── terraform/               # Infrastructure as Code
-│   ├── main.tf              # Main Terraform config
+│   ├── main.tf              # Object Storage config
+│   ├── functions.tf         # Functions & API Gateway
 │   ├── variables.tf         # Variable definitions
 │   ├── outputs.tf           # Output values
 │   ├── provider.tf          # OCI provider config
 │   └── terraform.tfvars.example  # Example variables
+├── docs/                    # Documentation
+│   ├── CHATBOT_SETUP.md     # Chatbot deployment guide
+│   └── DEPLOYMENT_CHECKLIST.md  # Deployment checklist
 ├── deploy.sh                # Deployment script
 ├── package.json             # Dependencies
 ├── vite.config.js           # Vite configuration
@@ -164,7 +178,7 @@ npm run preview
    You'll need:
    - Your tenancy OCID
    - Your user OCID
-   - Your region (e.g., us-ashburn-1)
+   - Your region (e.g., us-chicago-1)
    - The CLI will generate an API key pair for you
 
 3. **Verify configuration**
@@ -209,7 +223,7 @@ npm run preview
    user_ocid        = "ocid1.user.oc1..aaaaa..."
    fingerprint      = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
    private_key_path = "~/.oci/oci_api_key.pem"
-   region           = "us-ashburn-1"
+   region           = "us-chicago-1"  # Use your preferred OCI region
    compartment_ocid = "ocid1.compartment.oc1..aaaaa..."
    ```
 
@@ -271,7 +285,7 @@ npm run preview
 3. **Access your website**
    The script will display your website URL, something like:
    ```
-   https://objectstorage.us-ashburn-1.oraclecloud.com/n/YOUR_NAMESPACE/b/career-explorer-prod/o/index.html
+   https://objectstorage.<YOUR_REGION>.oraclecloud.com/n/YOUR_NAMESPACE/b/career-explorer-prod/o/index.html
    ```
 
    **Script Features:**
@@ -280,7 +294,7 @@ npm run preview
    - Includes error checking and helpful error messages
    - Can be integrated into CI/CD pipelines
 
-**Note**: The script requires Terraform state to be present (`terraform.tfstate`) to read outputs. If you delete the state file, re-run `terraform apply` first.
+**Note**: The script will read from Terraform state if available, otherwise it uses OCI CLI and environment variables (`OCI_NAMESPACE`, `OCI_BUCKET_NAME`, `OCI_REGION`).
 
 ## 🔄 Manual Deployment (Alternative)
 
@@ -322,9 +336,10 @@ For a professional URL like `careers.yourdomain.com`:
 Create a `.env` file for environment-specific configuration:
 
 ```env
-VITE_API_URL=https://api.example.com
-VITE_ANALYTICS_ID=your-analytics-id
+VITE_CHATBOT_API_URL=https://xxxxx.apigateway.<region>.oci.customer-oci.com/chat
 ```
+
+The `VITE_CHATBOT_API_URL` is required for the AI Career Counselor chatbot. Get this URL from `terraform output chatbot_api_gateway_url` after deploying the chatbot infrastructure. See `docs/CHATBOT_SETUP.md` for full instructions.
 
 ### Customizing Career Data
 
@@ -419,6 +434,17 @@ To add analytics tracking:
 
 **Problem**: CORS errors
 - **Solution**: Configure CORS on your Object Storage bucket in OCI Console
+
+### Chatbot Issues
+
+**Problem**: API Gateway returns 500 error
+- **Solution**: Create an IAM policy allowing API Gateway to invoke functions. See `docs/CHATBOT_SETUP.md`
+
+**Problem**: Fn CLI says "please upgrade Docker to 17.5.0"
+- **Solution**: Create a Docker compatibility wrapper for Podman. See `docs/CHATBOT_SETUP.md`
+
+**Problem**: Chatbot not responding
+- **Solution**: Test function directly with `fn invoke career-explorer-chatbot-prod career-counselor`. If that works, the issue is the IAM policy or API Gateway config
 
 ## 🎓 Learning Resources
 

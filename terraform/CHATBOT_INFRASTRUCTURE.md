@@ -108,7 +108,37 @@ When you run `terraform apply`, it creates:
 
 ---
 
-## 🔄 Terraform Deployment Workflow
+## 🔄 Deployment Workflow
+
+### Prerequisites
+
+**Install Podman and Fn CLI (macOS):**
+```bash
+brew install podman fn
+podman machine init
+podman machine start
+```
+
+**Create Docker compatibility wrapper** (Fn CLI requires a `docker` command):
+```bash
+sudo tee /usr/local/bin/docker << 'WRAPPER'
+#!/bin/bash
+for arg in "$@"; do
+  if [[ "$arg" == *"Version"* ]] || [[ "$arg" == *"version"* && "$arg" == *"format"* ]]; then
+    echo "20.10.0"
+    exit 0
+  fi
+done
+if [[ "$1" == "version" ]]; then
+  echo "Docker version 20.10.0, build podman-compat"
+  exit 0
+fi
+exec podman "$@"
+WRAPPER
+sudo chmod +x /usr/local/bin/docker
+```
+
+> **Note:** OCI Cloud Shell has networking restrictions that prevent pulling container images. Local deployment with Podman is recommended.
 
 ### Initial Deployment
 
@@ -144,22 +174,53 @@ Creates:
 - Functions Application (empty)
 - API Gateway (not yet linked)
 
-**Step 3: Deploy Function Code (Fn CLI)**
+**Step 3: Configure Fn CLI**
+```bash
+TENANCY_NAMESPACE=$(oci os ns get --query data --raw-output)
+
+fn create context <YOUR_REGION> --provider oracle
+fn use context <YOUR_REGION>
+fn update context oracle.compartment-id <YOUR_COMPARTMENT_OCID>
+fn update context api-url https://functions.<YOUR_REGION>.oraclecloud.com
+fn update context registry <YOUR_REGION>.ocir.io/${TENANCY_NAMESPACE}/career-explorer
+```
+
+**Step 4: Login to OCIR**
+
+Generate an Auth Token in OCI Console → Profile → Auth Tokens, then:
+```bash
+podman login <YOUR_REGION>.ocir.io
+# Username: <TENANCY_NAMESPACE>/oracleidentitycloudservice/<your-email>
+# Password: <AUTH_TOKEN>
+```
+
+**Step 5: Deploy Function Code**
 ```bash
 cd ../oci-functions/career-counselor
-fn deploy --app career-explorer-chatbot-prod
+fn -v deploy --app career-explorer-chatbot-prod
 fn list functions career-explorer-chatbot-prod
 ```
 
 Copy the function OCID from output.
 
-**Step 4: Link Function to API Gateway**
+**Step 6: Link Function to API Gateway**
 ```bash
 cd ../../terraform
 nano terraform.tfvars
 # Update: chatbot_function_ocid = "ocid1.fnfunc.oc1..xxxxx"
 
 terraform apply
+```
+
+**Step 7: Create IAM Policy (Required!)**
+
+Without this policy, API Gateway returns 500 errors:
+```bash
+oci iam policy create \
+  --compartment-id <YOUR_COMPARTMENT_OCID> \
+  --name "api-gateway-invoke-functions" \
+  --description "Allow API Gateway to invoke Functions" \
+  --statements '["ALLOW any-user to use functions-family in compartment id <YOUR_COMPARTMENT_OCID> where ALL {request.principal.type = '"'"'ApiGateway'"'"', request.resource.compartment.id = '"'"'<YOUR_COMPARTMENT_OCID>'"'"'}"]'
 ```
 
 Now API Gateway → Function link is complete!
@@ -341,13 +402,16 @@ terraform destroy
 ❌ Function OCID (created by Fn CLI)
 ❌ Docker images (built by Fn CLI)
 
-**Two-step process:**
+**Deployment process:**
 1. `terraform apply` - Creates infrastructure
-2. `fn deploy` - Deploys code
-3. `terraform apply` - Links them together
+2. Configure Fn CLI and login to OCIR
+3. `fn -v deploy` - Deploys function code
+4. `terraform apply` - Links API Gateway to function
+5. Create IAM policy - Allows API Gateway to invoke function
 
 ---
 
-**Status:** ✅ Complete and Production Ready  
-**Files:** All Terraform files updated for v3.0.0  
+**Status:** ✅ Complete and Production Ready
+**Files:** All Terraform files updated for v3.0.1
 **Documentation:** Full deployment guide in `docs/CHATBOT_SETUP.md`
+**Recommended deployment method:** Local Podman + Fn CLI (not Cloud Shell)

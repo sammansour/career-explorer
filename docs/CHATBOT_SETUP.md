@@ -42,49 +42,68 @@ The chatbot is powered by OpenAI's GPT models and runs on OCI Functions (serverl
 
 1. **OCI CLI** - Already installed for website deployment
 2. **Fn CLI** - For deploying functions
-3. **Docker** - Required by Fn CLI for building functions
+3. **Podman** - Container engine required by Fn CLI (lighter alternative to Docker)
 4. **OpenAI API Key** - Get from https://platform.openai.com/api-keys
 
-### Install Fn CLI
+### Install Fn CLI and Podman (macOS)
 
-**macOS/Linux:**
 ```bash
-curl -LSs https://raw.githubusercontent.com/fnproject/cli/master/install | sh
+brew install fn podman
 ```
 
-**Windows:**
-Download from https://github.com/fnproject/cli/releases
+### Start Podman
 
-**Verify installation:**
+Podman runs containers in a VM on macOS. Initialize and start it:
+
 ```bash
-fn version
-```
-
-### Install Podman
-
-**macOS:**
-```bash
-brew install podman
 podman machine init
 podman machine start
 ```
 
+**Important:** Run `podman machine start` before each deployment session.
+
+### Create Docker Compatibility Wrapper
+
+Fn CLI expects a `docker` command. Create a wrapper that delegates to Podman:
+
+```bash
+sudo tee /usr/local/bin/docker << 'WRAPPER'
+#!/bin/bash
+for arg in "$@"; do
+  if [[ "$arg" == *"Version"* ]] || [[ "$arg" == *"version"* && "$arg" == *"format"* ]]; then
+    echo "20.10.0"
+    exit 0
+  fi
+done
+if [[ "$1" == "version" ]]; then
+  echo "Docker version 20.10.0, build podman-compat"
+  exit 0
+fi
+exec podman "$@"
+WRAPPER
+sudo chmod +x /usr/local/bin/docker
+```
+
+### Verify Installation
+
+```bash
+fn version
+podman --version
+docker version   # Should show "20.10.0" via the wrapper
+```
+
+### Linux / Windows
+
 **Linux:**
 ```bash
 sudo dnf install podman  # or apt install podman
-podman --version
+# Install fn: curl -LSs https://raw.githubusercontent.com/fnproject/cli/master/install | sh
 ```
 
 **Windows:**
-Download Podman Desktop from https://podman.io/downloads
+Download Podman Desktop from https://podman.io/downloads and Fn CLI from https://github.com/fnproject/cli/releases
 
-**Verify:**
-```bash
-podman --version
-podman info
-```
-
-Note: On macOS, Podman runs in a VM; ensure `podman machine start` is run before deploying.
+> **Note:** OCI Cloud Shell has Fn CLI pre-installed but may have networking restrictions that prevent pulling container images from external registries. Local deployment with Podman is recommended.
 
 ---
 
@@ -184,24 +203,26 @@ You'll need:
 # Get your tenancy namespace (from OCI Console or CLI)
 TENANCY_NAMESPACE=$(oci os ns get --query data --raw-output)
 
-# Configure Fn CLI
+# Create and configure Fn CLI context
+fn create context <YOUR_REGION> --provider oracle
+fn use context <YOUR_REGION>
 fn update context oracle.compartment-id <YOUR_COMPARTMENT_OCID>
-fn update context api-url https://functions.us-chicago-1.oraclecloud.com
-fn update context registry us-chicago-1.ocir.io/${TENANCY_NAMESPACE}/career-explorer
-
-# Use your OCI region instead of us-ashburn-1 if different
+fn update context api-url https://functions.<YOUR_REGION>.oraclecloud.com
+fn update context registry <YOUR_REGION>.ocir.io/${TENANCY_NAMESPACE}/career-explorer
 ```
 
-### Generate Auth Token for Podman
+Replace `<YOUR_REGION>` with your OCI region (e.g., `us-chicago-1`, `us-ashburn-1`).
 
-1. Go to OCI Console → Profile → User Settings
+### Generate Auth Token for OCIR
+
+1. Go to OCI Console → Profile → My Profile
 2. Click "Auth Tokens" → "Generate Token"
 3. Save the token securely
 4. Login to OCIR:
 
 ```bash
-podman login us-chicago-1.ocir.io
-# Username: <TENANCY_NAMESPACE>/your-username
+podman login <YOUR_REGION>.ocir.io
+# Username: <TENANCY_NAMESPACE>/oracleidentitycloudservice/<your-email>
 # Password: <AUTH_TOKEN>
 ```
 
@@ -218,17 +239,19 @@ cd oci-functions/career-counselor
 ### Deploy Function
 
 ```bash
-# Deploy to the application created by Terraform using Podman
-fn -v deploy --app career-explorer-chatbot-prod --container-runtime podman
+# Deploy to the application created by Terraform
+fn -v deploy --app career-explorer-chatbot-prod
 ```
 
 **Note:** Replace `career-explorer-chatbot-prod` with your actual application name from Terraform output.
 
 This will:
-1. Build the Docker image
+1. Build the container image using Podman
 2. Push to OCIR
 3. Deploy to OCI Functions
 4. Configure environment variables (from Terraform)
+
+**Troubleshooting:** If you see a Docker version error, ensure the Docker compatibility wrapper is set up (see Prerequisites above).
 
 ### Get Function OCID
 
@@ -258,13 +281,27 @@ terraform apply
 
 This links the API Gateway to your deployed function.
 
+### Create IAM Policy (Required!)
+
+The API Gateway needs permission to invoke your function. **This step is required** — without it, the API Gateway will return 500 errors.
+
+```bash
+oci iam policy create \
+  --compartment-id <YOUR_COMPARTMENT_OCID> \
+  --name "api-gateway-invoke-functions" \
+  --description "Allow API Gateway to invoke Functions" \
+  --statements '["ALLOW any-user to use functions-family in compartment id <YOUR_COMPARTMENT_OCID> where ALL {request.principal.type = '"'"'ApiGateway'"'"', request.resource.compartment.id = '"'"'<YOUR_COMPARTMENT_OCID>'"'"'}"]'
+```
+
+Replace `<YOUR_COMPARTMENT_OCID>` with your actual compartment OCID.
+
 ### Get API Endpoint
 
 ```bash
 terraform output chatbot_api_gateway_url
 ```
 
-Example output: `https://xxxxx.apigateway.us-ashburn-1.oci.customer-oci.com/chat`
+Example output: `https://xxxxx.apigateway.<YOUR_REGION>.oci.customer-oci.com/chat`
 
 ---
 
@@ -281,7 +318,7 @@ Replace `<YOUR_API_GATEWAY_URL>` with the URL from Terraform output.
 
 **Example:**
 ```bash
-echo "VITE_CHATBOT_API_URL=https://xxxxx.apigateway.us-ashburn-1.oci.customer-oci.com/chat" > .env
+echo "VITE_CHATBOT_API_URL=https://xxxxx.apigateway.us-chicago-1.oci.customer-oci.com/chat" > .env
 ```
 
 ### Rebuild Frontend
@@ -299,16 +336,35 @@ The environment variable will be baked into the build.
 ### Upload to Object Storage
 
 ```bash
-# Using the deploy script
+# Using the deploy script (requires Terraform state)
 ./deploy.sh
 
-# Or manually with OCI CLI
+# Or manually with OCI CLI (set correct Content-Types!)
 oci os object bulk-upload \
   --namespace <YOUR_NAMESPACE> \
   --bucket-name <YOUR_BUCKET> \
   --src-dir ./dist \
   --overwrite
+
+# IMPORTANT: Re-upload with correct MIME types to prevent download instead of render
+for f in dist/**/* dist/*; do
+  [ -f "$f" ] || continue
+  key="${f#dist/}"
+  case "$f" in
+    *.html) mime="text/html" ;;
+    *.css)  mime="text/css" ;;
+    *.js)   mime="application/javascript" ;;
+    *.svg)  mime="image/svg+xml" ;;
+    *.png)  mime="image/png" ;;
+    *.json) mime="application/json" ;;
+    *)      mime="application/octet-stream" ;;
+  esac
+  oci os object put --namespace <YOUR_NAMESPACE> --bucket-name <YOUR_BUCKET> \
+    --name "$key" --file "$f" --force --content-type "$mime"
+done
 ```
+
+> **Note:** `oci os object bulk-upload` does not set Content-Type headers correctly. You must re-upload with explicit MIME types or the HTML will download instead of render in the browser.
 
 ---
 
@@ -527,6 +583,6 @@ After successful deployment:
 
 ---
 
-**Version:** 3.0.0  
-**Last Updated:** January 29, 2026  
-**Status:** Production Ready
+**Version:** 3.0.1
+**Last Updated:** February 6, 2026
+**Status:** Production Ready (deployed and verified)

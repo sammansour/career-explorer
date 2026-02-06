@@ -2,6 +2,44 @@
 
 All notable changes to the CareerExplorer project will be documented in this file.
 
+## [3.0.1] - 2026-02-06
+
+### Deployment Fixes & Documentation Updates
+
+This release fixes deployment issues discovered during the first end-to-end deployment of the AI Career Counselor chatbot and updates all documentation to match the working solution.
+
+#### Bug Fixes
+
+- **Fixed `func.py` echo mode**: Replaced stub/echo handler with actual OpenAI API integration including career context, conversation history, and CORS support
+- **Fixed `variables.tf` default OCID**: Cleared incorrect `chatbot_function_ocid` default (was set to an application OCID instead of a function OCID)
+- **Fixed Dockerfile architecture**: Removed hardcoded `--platform=linux/amd64` that caused cross-compilation failures on ARM64 systems (Apple Silicon Macs)
+- **Fixed MIME types for Object Storage**: Added re-upload step with explicit Content-Type headers to prevent HTML from downloading instead of rendering
+
+#### New: IAM Policy Requirement
+
+- **Discovered missing IAM policy**: API Gateway requires an IAM policy to invoke OCI Functions. Without it, the gateway returns 500 errors even though `fn invoke` works directly. Added policy creation step to all deployment guides.
+
+#### Documentation Updates
+
+- **`docs/CHATBOT_SETUP.md`**: Updated prerequisites to use Podman instead of Docker, added Docker compatibility wrapper instructions, added IAM policy creation step, added MIME type re-upload instructions
+- **`docs/DEPLOYMENT_CHECKLIST.md`**: Added complete chatbot deployment checklist (Fn CLI config, OCIR login, function deploy, IAM policy, frontend rebuild), added Known Issues & Solutions section
+- **`terraform/CHATBOT_INFRASTRUCTURE.md`**: Updated to reflect Podman-based workflow, added IAM policy requirement, updated deployment steps
+- **`terraform/outputs.tf`**: Updated deployment instructions with Podman prerequisites, OCIR login, Docker wrapper setup, and IAM policy creation command
+- **`README.md`**: Updated region references to `us-chicago-1`, updated environment variables documentation
+- **`deploy.sh`**: Added standalone deployment mode that works without Terraform state
+
+#### Deployment Method
+
+- **Recommended: Podman + Fn CLI locally** (not OCI Cloud Shell, which has networking restrictions)
+- Created Docker compatibility wrapper script for Fn CLI to work with Podman
+- Documented OCIR login and auth token generation
+
+#### Technical Details
+
+- Function version bumped to 3.0.5 through deployment iterations
+- Tested end-to-end: React frontend → API Gateway → OCI Function → OpenAI API
+- Verified on Apple Silicon (ARM64) Mac with Podman
+
 ## [3.0.0] - 2026-01-29
 
 ### 🤖 AI Career Counselor Chatbot - Major Feature Release
