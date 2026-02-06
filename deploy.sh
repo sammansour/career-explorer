@@ -29,7 +29,7 @@ if [ -f "terraform/terraform.tfstate" ]; then
 else
     echo -e "${BLUE}Terraform state not found. Using environment variables or OCI CLI...${NC}"
     NAMESPACE="${OCI_NAMESPACE:-$(oci os ns get --query data --raw-output 2>/dev/null)}"
-    BUCKET_NAME="${OCI_BUCKET_NAME:-career-explorer-website-prod}"
+    BUCKET_NAME="${OCI_BUCKET_NAME:-career-explorer-prod}"
     REGION="${OCI_REGION:-us-chicago-1}"
 
     if [ -z "$NAMESPACE" ]; then
@@ -72,17 +72,10 @@ if [ -n "$BUCKET_BASE_URL" ] && [ -f "dist/index.html" ]; then
   fi
 fi
 
-# Upload all files from dist directory
-oci os object bulk-upload \
-    --namespace "$NAMESPACE" \
-    --bucket-name "$BUCKET_NAME" \
-    --src-dir ./dist \
-    --overwrite
-
-echo -e "${GREEN}✓ Upload completed successfully${NC}"
-
-# Ensure correct Content-Type on objects by re-uploading with explicit MIME (avoids octet-stream + nosniff blocking)
-echo -e "${BLUE}🧩 Setting Content-Type by re-uploading objects...${NC}"
+# Upload all files with correct Content-Type headers
+# NOTE: We do NOT use bulk-upload because it sets all Content-Types to
+# application/octet-stream, which causes HTML to download instead of render.
+echo -e "${BLUE}☁️  Uploading files with correct MIME types...${NC}"
 
 mime_for() {
   case "$1" in
@@ -96,25 +89,38 @@ mime_for() {
     *.jpg|*.jpeg) echo "image/jpeg" ;;
     *.gif) echo "image/gif" ;;
     *.ico) echo "image/x-icon" ;;
+    *.woff) echo "font/woff" ;;
+    *.woff2) echo "font/woff2" ;;
+    *.ttf) echo "font/ttf" ;;
+    *.eot) echo "application/vnd.ms-fontobject" ;;
+    *.webp) echo "image/webp" ;;
+    *.map) echo "application/json" ;;
+    *.txt) echo "text/plain" ;;
+    *.xml) echo "application/xml" ;;
     *) echo "application/octet-stream" ;;
   esac
 }
 
+UPLOAD_COUNT=0
+FAIL_COUNT=0
+
 find dist -type f | while IFS= read -r f; do
   key="${f#dist/}"
   mime=$(mime_for "$f")
-  oci os object put \
+  if oci os object put \
     --namespace "$NAMESPACE" \
     --bucket-name "$BUCKET_NAME" \
     --name "$key" \
     --file "$f" \
     --force \
-    --content-type "$mime" >/dev/null && \
-    echo -e "${GREEN}✓ Uploaded $key with Content-Type=$mime${NC}" || \
-    echo -e "${RED}Failed to upload $key with explicit Content-Type${NC}"
+    --content-type "$mime" >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ $key  ($mime)${NC}"
+  else
+    echo -e "${RED}✗ Failed: $key${NC}"
+  fi
 done
 
-echo -e "${GREEN}✓ Content-Type set on all objects${NC}"
+echo -e "${GREEN}✓ All files uploaded with correct Content-Types${NC}"
 
 # Get the website URL
 WEBSITE_URL="https://objectstorage.${REGION}.oraclecloud.com/n/${NAMESPACE}/b/${BUCKET_NAME}/o/index.html"
