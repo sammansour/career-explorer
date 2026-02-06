@@ -17,7 +17,10 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(gh auth status:*)",
-      "Bash(git remote set-url:*)"
+      "Bash(git remote set-url:*)",
+      "Bash(docker:*)",
+      "Bash(podman:*)",
+      "Bash(oci:*)"
     ]
   }
 }
