@@ -74,7 +74,7 @@ const Home = () => {
               </span>
             </motion.div>
 
-            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6">
+            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 text-white">
               Design Your{' '}
               <span className="gradient-text">Dream Career</span>
             </h1>
@@ -182,6 +182,133 @@ const Home = () => {
                 <p className="text-slate-400 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* AI Counselor Section */}
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-tech-600/10 via-transparent to-transparent" />
+        <div className="container mx-auto px-6 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="glass rounded-3xl p-12 max-w-5xl mx-auto relative overflow-hidden"
+          >
+            {/* Decorative gradient orb */}
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-gradient-to-br from-tech-500/20 to-accent-500/20 blur-3xl" />
+
+            <div className="grid md:grid-cols-2 gap-12 items-center relative z-10">
+              {/* Left column: Text content */}
+              <div>
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                >
+                  <span className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-tech-500/20 to-accent-500/20 border border-tech-500/30 text-tech-300 text-sm font-medium mb-6">
+                    ✨ AI-Powered Guidance
+                  </span>
+
+                  <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
+                    Meet Your AI{' '}
+                    <span className="gradient-text">Career Counselor</span>
+                  </h2>
+
+                  <p className="text-slate-300 text-lg mb-6 leading-relaxed">
+                    Get personalized career advice powered by AI. Ask about universities,
+                    companies hiring in your field, degree requirements, and career paths
+                    — all tailored to your interests.
+                  </p>
+
+                  <ul className="space-y-3 mb-8">
+                    {[
+                      'University recommendations for your chosen field',
+                      'Companies actively hiring in your area of interest',
+                      'Degree and certification guidance',
+                      'Personalized career path planning',
+                    ].map((item, index) => (
+                      <motion.li
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-center text-slate-300"
+                      >
+                        <span className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mr-3 flex-shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                        {item}
+                      </motion.li>
+                    ))}
+                  </ul>
+
+                  <Link to="/counselor">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="btn-glow px-8 py-4 bg-gradient-to-r from-tech-600 to-accent-600 text-white rounded-xl font-semibold text-lg shadow-lg shadow-tech-500/30 hover:shadow-xl hover:shadow-tech-500/40"
+                    >
+                      Start a Conversation
+                    </motion.button>
+                  </Link>
+                </motion.div>
+              </div>
+
+              {/* Right column: Static chat preview */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="hidden md:block"
+              >
+                <div className="bg-slate-900/80 rounded-2xl border border-white/10 p-6 shadow-2xl">
+                  {/* Mock chat header */}
+                  <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-white/10">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+                      <span className="text-xl">🎓</span>
+                    </div>
+                    <div>
+                      <div className="text-white font-semibold text-sm">AI Career Counselor</div>
+                      <div className="text-green-400 text-xs flex items-center">
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5 animate-pulse" />
+                        Online
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mock conversation */}
+                  <div className="space-y-4">
+                    <div className="flex justify-start">
+                      <div className="bg-white/10 rounded-2xl rounded-tl-sm px-4 py-2 max-w-[85%]">
+                        <p className="text-sm text-slate-300">What career paths combine creativity and technology?</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl rounded-tr-sm px-4 py-2 max-w-[85%]">
+                        <p className="text-sm text-white">Great question! UX Design, Creative Technology, and Game Development all blend artistic creativity with technical skills...</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mock input bar */}
+                  <div className="mt-6 flex space-x-2">
+                    <div className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2">
+                      <span className="text-slate-500 text-sm">Ask me anything...</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>

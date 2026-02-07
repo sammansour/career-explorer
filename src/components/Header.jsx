@@ -1,13 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const Header = ({ darkMode, setDarkMode }) => {
+const Header = () => {
   const location = useLocation();
 
   const navItems = [
     { path: '/', label: 'Home' },
     { path: '/explore', label: 'Explore Careers' },
     { path: '/quiz', label: 'Take Quiz' },
+    { path: '/counselor', label: 'AI Counselor', icon: '✨' },
     { path: '/favorites', label: 'Favorites' },
   ];
 
@@ -46,6 +47,7 @@ const Header = ({ darkMode, setDarkMode }) => {
                       : 'text-slate-300 hover:text-white'
                   }`}
                 >
+                  {item.icon && <span className="mr-1">{item.icon}</span>}
                   {item.label}
                 </span>
                 {location.pathname === item.path && (
@@ -57,17 +59,6 @@ const Header = ({ darkMode, setDarkMode }) => {
                 )}
               </Link>
             ))}
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              {darkMode ? '☀️' : '🌙'}
-            </motion.button>
           </div>
         </div>
 
@@ -83,6 +74,7 @@ const Header = ({ darkMode, setDarkMode }) => {
                   : 'bg-white/5 text-slate-300'
               }`}
             >
+              {item.icon && <span className="mr-1">{item.icon}</span>}
               {item.label}
             </Link>
           ))}

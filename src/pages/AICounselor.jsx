@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams, Link } from 'react-router-dom';
 import { sendMessage } from '../utils/chatApi';
+import { careers } from '../data/careers';
 
 const AICounselor = () => {
   const location = useLocation();
-  const careerContext = location.state?.career;
+  const [searchParams] = useSearchParams();
+  const careerContext = location.state?.career
+    || (() => {
+      const paramId = searchParams.get('careerId');
+      return paramId ? careers.find(c => c.id === paramId) || null : null;
+    })();
   
   const [messages, setMessages] = useState([
     {
@@ -118,6 +124,22 @@ const AICounselor = () => {
           </p>
         </motion.div>
 
+        {/* Back to career breadcrumb */}
+        {careerContext && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center mb-4"
+          >
+            <Link
+              to={`/career/${careerContext.id}`}
+              className="text-slate-400 hover:text-white transition-colors text-sm"
+            >
+              ← Back to {careerContext.title}
+            </Link>
+          </motion.div>
+        )}
+
         {/* Main Chat Interface */}
         <div className="max-w-5xl mx-auto">
           <div className="glass rounded-3xl overflow-hidden shadow-2xl">
@@ -147,7 +169,7 @@ const AICounselor = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="h-[500px] overflow-y-auto p-6 space-y-6 bg-slate-50 dark:bg-slate-900">
+            <div className="h-[calc(100vh-420px)] min-h-[400px] max-h-[600px] overflow-y-auto p-6 space-y-6 bg-slate-50 dark:bg-slate-900">
               {messages.map((message, index) => (
                 <motion.div
                   key={index}

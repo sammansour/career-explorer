@@ -223,6 +223,23 @@ const CareerDetail = ({ favorites, toggleFavorite }) => {
                     ))}
                   </div>
                 </div>
+
+                {/* Ask AI Counselor */}
+                <div className="mt-6 pt-4 border-t border-white/10">
+                  <Link to={`/counselor?careerId=${career.id}`}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-tech-600 to-accent-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-tech-500/20 hover:shadow-xl hover:shadow-tech-500/30 flex items-center justify-center space-x-2"
+                    >
+                      <span>🎓</span>
+                      <span>Ask AI Counselor</span>
+                    </motion.button>
+                  </Link>
+                  <p className="text-xs text-slate-500 mt-2 text-center">
+                    Get personalized advice about this career
+                  </p>
+                </div>
               </div>
             </motion.div>
 

@@ -22,7 +22,8 @@
       "Bash(podman:*)",
       "Bash(oci:*)",
       "Bash(fn version:*)",
-      "Bash(sudo rm:*)"
+      "Bash(sudo rm:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }
